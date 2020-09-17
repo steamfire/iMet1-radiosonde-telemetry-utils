@@ -1,13 +1,6 @@
 var inputSheet = "PasteCSVHere";
 var outputSheet = "ParsedOutput";
 
-function SheetStarter(){
-  prepSpreadSheet();  // Setup input and output sheets
-// Set the input sheet to plain text
-  setPlainText("A2:D", inputSheet);
-}
-
-
   // Set up two new sheets to be input and output
   // (or just use the current sheets if they already exist)
 function prepSpreadSheet(){
@@ -38,12 +31,3 @@ function setPlainText(rangeDesired,sheetName){
 
 
 
-function suckInAFewLines() {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var data = sheet.getDataRange().getValues();
-  for (var i = 0; i < data.length; i++) {
-    Logger.log('Date: ' + data[i][0]);
-    Logger.log('Time: ' + data[i][1]);
-    Logger.log('Hex: ' + data[i][2]);
-  }
-}

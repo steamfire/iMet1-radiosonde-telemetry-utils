@@ -1,12 +1,4 @@
-function testiMet1Decode() {
-  //var testHexTelemetryString = "0102FDBA17420E73F4C2D25309100312D6C0"; //GPS example
-  var testHexTelemetryString = "010308010000D60852000060AC"  //XDATA Ozonesonde example
-  //var testHexTelemetryString = "0104872C5B890195055D2537EA0B0B0D9505CBB2" //PTUX packet example
-  var decodediMetPacketAsCSV = iMet1Decode(testHexTelemetryString);
-  Logger.log(decodediMetPacketAsCSV);
-
-}
-
+// Function 
 
 function iMet1Decode(hexTelemetryString){
 
@@ -24,15 +16,15 @@ function iMet1Decode(hexTelemetryString){
   switch(packetID) {
     
     case 2: // GPS Packet
-      var decodediMetPacketAsCSV = parseGPSPacketIntoiMet1Vars(byteTelemetryArray);
+      var decodediMetPacketObject = parseGPSPacketIntoiMet1Vars(byteTelemetryArray);
       break;
       
     case 3: // XDATA Packet (Ozonesonde is a subset of this)
-      var decodediMetPacketAsCSV = parseXDATAPacketIntoiMet1Vars(byteTelemetryArray);
+      var decodediMetPacketObject = parseXDATAPacketIntoiMet1Vars(byteTelemetryArray);
       break;
       
     case 4: // PTUX Packet
-      var decodediMetPacketAsCSV = parsePTUXPacketIntoiMet1Vars(byteTelemetryArray);
+      var decodediMetPacketObject = parsePTUXPacketIntoiMet1Vars(byteTelemetryArray);
       break;
       
     default:
@@ -40,7 +32,8 @@ function iMet1Decode(hexTelemetryString){
       Logger.log("AN UNKNOWN PACKET TYPE WAS DETECTED: "+packetID);      
   }
   
-  return decodediMetPacketAsCSV; 
+   
+  return decodediMetPacketObject;
   
 }
 
@@ -60,7 +53,14 @@ function iMet1PacketTypeIdentifier(byteArrayInput) {
 
 // Take GPS byte array and parse into proper variables
 function parseGPSPacketIntoiMet1Vars(byteTelemetryArray) {
-  Logger.log("GPS Packet Detected");
+  Logger.log("GPS Packet Detected: " + byteTelemetryArray);
+  
+  var GPSdecodedObject = new Object();
+  
+   //array position 1 is the packet type identifier
+   GPSdecodedObject.packetType = byteTelemetryArray[1];  
+  
+  
   //Latitude (LSB) (4bytes) Pos=2
     // Create a reversed order array (to be MSB)
     var latMSBArray = new Uint8Array([
@@ -68,8 +68,9 @@ function parseGPSPacketIntoiMet1Vars(byteTelemetryArray) {
       byteTelemetryArray[4],
       byteTelemetryArray[3],
       byteTelemetryArray[2]]);  
+
     // Convert to float, with 5 decimal places
-    var latitude = byteArrayToFloat(latMSBArray).toFixed(5);
+    GPSdecodedObject.latitude = byteArrayToFloat(latMSBArray).toFixed(5);
   
   //Longitude (LSB) (4bytes) Pos=6
       var lonMSBArray = new Uint8Array([
@@ -78,7 +79,7 @@ function parseGPSPacketIntoiMet1Vars(byteTelemetryArray) {
       byteTelemetryArray[7],
       byteTelemetryArray[6]]);  
     // Convert to float
-    var longitude = byteArrayToFloat(lonMSBArray).toFixed(5);
+    GPSdecodedObject.longitude = byteArrayToFloat(lonMSBArray).toFixed(5);
   
   //Altitude (LSB) (2bytes) Pos=10
     var altMSBArray = new Uint8Array([
@@ -87,28 +88,28 @@ function parseGPSPacketIntoiMet1Vars(byteTelemetryArray) {
     //Convert to variable
     var viewAlt = new DataView(altMSBArray.buffer);
     //Scale to iMet
-    unscaledAltitude = viewAlt.getInt16();
-  var  altitude = unscaledAltitude - 5000;
+    var unscaledAltitude = viewAlt.getInt16();
+  GPSdecodedObject.altitude = unscaledAltitude - 5000;
   
   //Sats (1byte) Pos=12
-  var satellites = byteTelemetryArray[12];
+  GPSdecodedObject.satellites = byteTelemetryArray[12];
   
   //Hours (1byte) Pos=13
-  GPShours = ("00" + byteTelemetryArray[13]).slice(-2);
+  var GPShours = ("00" + byteTelemetryArray[13]).slice(-2);
   
   //Minutes (1byte) Pos=14
-  GPSminutes = ("00" + byteTelemetryArray[14]).slice(-2);
+  var GPSminutes = ("00" + byteTelemetryArray[14]).slice(-2);
   
   //Seconds (1byte) Pos=15
-  GPSseconds = ("00" + byteTelemetryArray[15]).slice(-2);
+  var GPSseconds = ("00" + byteTelemetryArray[15]).slice(-2);
   
   //time
-  var gpsTimeString = GPShours + ":" + GPSminutes + ":" + GPSseconds;
+  GPSdecodedObject.gpsTimeString = GPShours + ":" + GPSminutes + ":" + GPSseconds;
   //CRC (MSB) (2bytes) Pos=16
   
-  var GPSiMetDecodedCSV = latitude  + "," +  longitude  + "," + altitude + "," +  satellites  + "," + gpsTimeString;
-  Logger.log("GPS Packet: " + GPSiMetDecodedCSV);
-  return GPSiMetDecodedCSV;
+  GPSdecodedObject.decodediMetPacketAsCSV = GPSdecodedObject.latitude  + "," +  GPSdecodedObject.longitude  + "," + GPSdecodedObject.altitude + "," +  GPSdecodedObject.satellites  + "," + GPSdecodedObject.gpsTimeString;
+  Logger.log("GPS Packet: " + GPSdecodedObject.decodediMetPacketAsCSV);
+  return GPSdecodedObject;
 }
 
 
@@ -117,6 +118,13 @@ function parseGPSPacketIntoiMet1Vars(byteTelemetryArray) {
 // Take PTUX byte array and parse into proper variables
 // *****FIELDS ARE LSB****
 function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
+    var PTUXdecodedObject = new Object();
+  
+   //array position 1 is the packet type identifier
+   PTUXdecodedObject.packetType = byteTelemetryArray[1];  
+  
+  
+  
   // Packet Sequence Number 2bytes Pos=2
     // Change to MSB and combine to one variable
       var ptuxPSeqNumMSBArray = new Uint8Array([
@@ -125,7 +133,7 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Convert to variable
     var viewptuxSeqNum = new DataView(ptuxPSeqNumMSBArray.buffer);
     //Scale to iMet
-    var ptuxPacketSeqNumber = viewptuxSeqNum.getInt16();
+    PTUXdecodedObject.ptuxPacketSeqNumber = viewptuxSeqNum.getInt16();
     
   
   // Pressure 3bytes Pos=4 (P/100) [mb]
@@ -139,7 +147,7 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Scale to iMet
     var PTUXpressureUnscaled = viewPTUXpressure.getInt32();
      //Scale to iMet
-    var PTUXpressure = PTUXpressureUnscaled / 100 ;
+    PTUXdecodedObject.PTUXpressure = PTUXpressureUnscaled / 100 ;
   
   
   // Temperature 2bytes Pos=7 (T/100) [°C]
@@ -151,7 +159,7 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Scale to iMet
     var PTUXexternalTemperatureUnscaled = viewPTUXexternalTemperature.getInt16();
      //Scale to iMet
-    var PTUXexternalTemperature = PTUXexternalTemperatureUnscaled / 100 ;
+    PTUXdecodedObject.PTUXexternalTemperature = PTUXexternalTemperatureUnscaled / 100 ;
   
   // Humidity 2bytes Pos=9 (U/100) [%RH]
         var PTUXhumidityMSBArray = new Uint8Array([
@@ -162,12 +170,12 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Scale to iMet
     var PTUXhumidityUnscaled = viewPTUXhumidity.getInt16();
      //Scale to iMet
-    var PTUXhumidity = PTUXhumidityUnscaled / 100 ;
+    PTUXdecodedObject.PTUXhumidity = PTUXhumidityUnscaled / 100 ;
   
   
   
   // Battery Voltage 1byte Pos=11 (VBAT/10) [V]
-    var PTUXbatteryVoltage = byteTelemetryArray[11] / 10 ;
+    PTUXdecodedObject.PTUXbatteryVoltage = byteTelemetryArray[11] / 10 ;
   
   
   // Radiosonde Internal Temperature 2byte Pos=12 (TI/100) [°C]
@@ -179,7 +187,7 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Scale to iMet
     var PTUXradiosondeInternalTemperatureUnscaled = viewPTUXradiosondeInternalTemperature.getInt16();
      //Scale to iMet
-    var PTUXradiosondeInternalTemperature = PTUXradiosondeInternalTemperatureUnscaled / 100 ;
+    PTUXdecodedObject.PTUXradiosondeInternalTemperature = PTUXradiosondeInternalTemperatureUnscaled / 100 ;
   
   
   
@@ -192,7 +200,7 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Scale to iMet
     var PTUXpressureSensorTemperatureUnscaled = viewPTUXpressureSensorTemperature.getInt16();
      //Scale to iMet
-    var PTUXpressureSensorTemperature = PTUXpressureSensorTemperatureUnscaled / 100 ;
+    PTUXdecodedObject.PTUXpressureSensorTemperature = PTUXpressureSensorTemperatureUnscaled / 100 ;
   
   
   
@@ -205,13 +213,16 @@ function parsePTUXPacketIntoiMet1Vars(byteTelemetryArray) {
     //Scale to iMet
     var PTUXhumiditySensorTemperatureUnscaled = viewPTUXhumiditySensorTemperature.getInt16();
      //Scale to iMet
-    var PTUXhumiditySensorTemperature = PTUXhumiditySensorTemperatureUnscaled / 100 ;
+    PTUXdecodedObject.PTUXhumiditySensorTemperature = PTUXhumiditySensorTemperatureUnscaled / 100 ;
 
 
     
-   var PTUXiMetDecodedCSV = ptuxPacketSeqNumber+ "," + PTUXpressure+ "," +  PTUXexternalTemperature+ "," +  PTUXhumidity+ "," +  PTUXbatteryVoltage + "," +  PTUXradiosondeInternalTemperature + "," +  PTUXpressureSensorTemperature + "," +  PTUXhumiditySensorTemperature;
-      Logger.log("PTUX Packet: " + PTUXiMetDecodedCSV); 
-   return PTUXiMetDecodedCSV;
+   PTUXdecodedObject.decodediMetPacketAsCSV = PTUXdecodedObject.ptuxPacketSeqNumber+ "," + PTUXdecodedObject.PTUXpressure+ "," 
+   +  PTUXdecodedObject.PTUXexternalTemperature+ "," +  PTUXdecodedObject.PTUXhumidity+ "," +  PTUXdecodedObject.PTUXbatteryVoltage + "," +  
+     PTUXdecodedObject.PTUXradiosondeInternalTemperature + "," +  PTUXdecodedObject.PTUXpressureSensorTemperature + "," +  PTUXdecodedObject.PTUXhumiditySensorTemperature;
+  
+  Logger.log("PTUX Object CSV Packet: " + PTUXdecodedObject.decodediMetPacketAsCSV); 
+   return PTUXdecodedObject;
   
 }
 
@@ -245,12 +256,12 @@ function parseXDATAPacketIntoiMet1Vars(byteTelemetryArray) {
     switch(XDATAinstrumentID) {
     
       case 0x01: // Ozonesonde Packet
-        var decodediMetPacketAsCSV = parseOZONESONDEPacketIntoiMet1Vars(byteTelemetryArray);
+        var decodedXDATAPacketObject = parseOZONESONDEPacketIntoiMet1Vars(byteTelemetryArray);
         break;
         
       default:
     }
-  return decodediMetPacketAsCSV; 
+  return decodedXDATAPacketObject; 
 }
 
 
@@ -261,17 +272,21 @@ function parseXDATAPacketIntoiMet1Vars(byteTelemetryArray) {
 //    This is a specific instrument format of the XDATA protocol.
 // ********** FIELDS HERE ARE MSB FIRST!!!! *********
 function parseOZONESONDEPacketIntoiMet1Vars(byteTelemetryArray) {
-
+  var OZdecodedObject = new Object();
+  
+   //array position 1 is the packet type identifier
+   OZdecodedObject.packetType = byteTelemetryArray[1];  
+  
 
    //Message Length  1byte Pos=2  (THIS MEANS ALL BYTES AFTER THIS BYTE, 
    //   EXCEPT THE CRC AT THE END)
-   var OZmessageLength = byteTelemetryArray[2];
+   OZdecodedObject.OZmessageLength = byteTelemetryArray[2];
    
   // Instrument ID 1byte Pos=3  (always 1 for Ozonesonde)
-  var OZinstrumentID = byteTelemetryArray[3];
+  OZdecodedObject.OZinstrumentID = byteTelemetryArray[3];
   
   // Daisy Chain Index  Pos=4
-  var OZdaisyChainIndex = byteTelemetryArray[4];
+  OZdecodedObject.OZdaisyChainIndex = byteTelemetryArray[4];
   
   
   // Cell Current (IC) Scale: (IC/1000)=[µA]  2bytes Pos=5 
@@ -282,7 +297,7 @@ function parseOZONESONDEPacketIntoiMet1Vars(byteTelemetryArray) {
     var viewOZcellCurrent = new DataView(OZcellCurrentMSBArray.buffer);
     //Scale to iMet
     var unscaledOZcellCurrent = viewOZcellCurrent.getInt16();
-    var OZcellCurrent = unscaledOZcellCurrent / 1000;
+    OZdecodedObject.OZcellCurrent = unscaledOZcellCurrent / 1000;
   
   
   // Pump Temperature (TP) Scale: (TP/100)=[°C] 2bytes Pos=7
@@ -293,28 +308,22 @@ function parseOZONESONDEPacketIntoiMet1Vars(byteTelemetryArray) {
     var viewOZpumpTemperature = new DataView(OZpumpTemperatureMSBArray.buffer);
     //Scale to iMet
     var unscaledOZpumpTemperature = viewOZpumpTemperature.getInt16();
-    var OZpumpTemperature = unscaledOZpumpTemperature / 100;
+    OZdecodedObject.OZpumpTemperature = unscaledOZpumpTemperature / 100;
   
   
   // Pump Current (IP)  Scale: (IP) [mA] 1byte Pos=9
-    var OZpumpCurrent = byteTelemetryArray[9];
+    OZdecodedObject.OZpumpCurrent = byteTelemetryArray[9];
   
   
   
   // Battery Voltage (VBAT) Scale: (VBAT/10) [V] 1byte Pos=10
-   var OZbatteryVoltage = byteTelemetryArray[10] / 10;
+   OZdecodedObject.OZbatteryVoltage = byteTelemetryArray[10] / 10;
 
-  var OZiMetDecodedCSV = OZmessageLength + "," + OZinstrumentID  + "," + OZdaisyChainIndex  + "," +  OZcellCurrent  + "," + OZpumpTemperature  + "," + OZpumpCurrent  + "," + OZbatteryVoltage;
-  Logger.log("OZONESONDE Packet: " + OZiMetDecodedCSV );
+  OZdecodedObject.decodediMetPacketAsCSV = OZdecodedObject.OZmessageLength + "," + OZdecodedObject.OZinstrumentID  + "," + OZdecodedObject.OZdaisyChainIndex  + 
+    "," +  OZdecodedObject.OZcellCurrent  + "," + OZdecodedObject.OZpumpTemperature  + "," + OZdecodedObject.OZpumpCurrent  + "," + OZdecodedObject.OZbatteryVoltage;
   
-  return OZiMetDecodedCSV;
+  Logger.log("OZONESONDE Packet: " + OZdecodedObject.decodediMetPacketAsCSV );
+  
+  return OZdecodedObject;
 
 }
-
-
-
-
-
-
-
-
